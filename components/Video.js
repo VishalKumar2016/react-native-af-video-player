@@ -57,7 +57,7 @@ class Video extends Component {
     this.state = {
       paused: !props.autoPlay,
       muted: false,
-      fullScreen: false,
+      fullScreen: props.fullScreen || false,
       inlineHeight: Win.width * 0.5625,
       loading: false,
       duration: 0,
@@ -69,16 +69,13 @@ class Video extends Component {
     this.animInline = new Animated.Value(Win.width * 0.5625)
     this.animFullscreen = new Animated.Value(Win.width * 0.5625)
     this.BackHandler = this.BackHandler.bind(this)
-    this.onRotated = this.onRotated.bind(this)
   }
 
   componentDidMount() {
-    Dimensions.addEventListener('change', this.onRotated)
     BackHandler.addEventListener('hardwareBackPress', this.BackHandler)
   }
 
   componentWillUnmount() {
-    Dimensions.removeEventListener('change', this.onRotated)
     BackHandler.removeEventListener('hardwareBackPress', this.BackHandler)
   }
 
@@ -88,7 +85,6 @@ class Video extends Component {
 
   onLoad(data) {
     if (!this.state.loading) return
-    this.props.onLoad(data)
     const { height, width } = data.naturalSize
     const ratio = height === 'undefined' && width === 'undefined' ?
       (9 / 16) : (height / width)
@@ -101,6 +97,7 @@ class Video extends Component {
       inlineHeight,
       duration: data.duration
     }, () => {
+      this.props.onLoad(data)
       Animated.timing(this.animInline, { toValue: inlineHeight, duration: 200 }).start()
       this.props.onPlay(!this.state.paused)
       if (!this.state.paused) {
@@ -129,35 +126,6 @@ class Video extends Component {
     this.setState({ currentTime: 0 }, () => {
       if (!loop) this.controls.showControls()
     })
-  }
-
-  onRotated({ window: { width, height } }) {
-    // Add this condition incase if inline and fullscreen options are turned on
-    if (this.props.inlineOnly) return
-    const orientation = width > height ? 'LANDSCAPE' : 'PORTRAIT'
-    if (this.props.rotateToFullScreen) {
-      if (orientation === 'LANDSCAPE') {
-        this.setState({ fullScreen: true }, () => {
-          this.animToFullscreen(height)
-          this.props.onFullScreen(this.state.fullScreen)
-        })
-        return
-      }
-      if (orientation === 'PORTRAIT') {
-        this.setState({
-          fullScreen: false,
-          paused: this.props.fullScreenOnly || this.state.paused
-        }, () => {
-          this.animToInline()
-          if (this.props.fullScreenOnly) this.props.onPlay(!this.state.paused)
-          this.props.onFullScreen(this.state.fullScreen)
-        })
-        return
-      }
-    } else {
-      this.animToInline()
-    }
-    if (this.state.fullScreen) this.animToFullscreen(height)
   }
 
   onSeekRelease(percent) {
@@ -236,28 +204,7 @@ class Video extends Component {
   }
 
   toggleFS() {
-    this.setState({ fullScreen: !this.state.fullScreen }, () => {
-      Orientation.getOrientation((e, orientation) => {
-        if (this.state.fullScreen) {
-          const initialOrient = Orientation.getInitialOrientation()
-          const height = orientation !== initialOrient ?
-            Win.width : Win.height
-          this.props.onFullScreen(this.state.fullScreen)
-          if (this.props.rotateToFullScreen) Orientation.lockToLandscape()
-          this.animToFullscreen(height)
-        } else {
-          if (this.props.fullScreenOnly) {
-            this.setState({ paused: true }, () => this.props.onPlay(!this.state.paused))
-          }
-          this.props.onFullScreen(this.state.fullScreen)
-          if (this.props.rotateToFullScreen) Orientation.lockToPortrait()
-          this.animToInline()
-          setTimeout(() => {
-            if (!this.props.lockPortraitOnFsExit) Orientation.unlockAllOrientations()
-          }, 1500)
-        }
-      })
-    })
+    this.props.onFullScreen(this.state.fullScreen);
   }
 
   animToFullscreen(height) {
@@ -371,10 +318,8 @@ class Video extends Component {
       <Animated.View
         style={[
           styles.background,
-          fullScreen ?
-            (styles.fullScreen, { height: this.animFullscreen })
-            : { height: this.animInline },
-          fullScreen ? null : style
+          { height: this.animInline }, 
+          style
         ]}
       >
         <StatusBar hidden={fullScreen} />

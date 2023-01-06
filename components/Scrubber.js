@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Slider as RNSlider
 } from 'react-native'
-import Slider from 'react-native-slider'
+import Slider from '@react-native-community/slider'
 
 const styles = StyleSheet.create({
   container: {
@@ -30,7 +30,7 @@ const Scrubber = (props) => {
   const { progress, theme, onSeek, onSeekRelease } = props
   return (
     <View style={styles.container}>
-      { Platform.OS === 'ios' ?
+      {Platform.OS === 'ios' ?
         <Slider
           onValueChange={val => onSeek(val)}
           onSlidingComplete={val => onSeekRelease(val)}
@@ -42,7 +42,7 @@ const Scrubber = (props) => {
           maximumTrackTintColor={trackColor}
           trackClickable
         />
-      :
+        :
         <RNSlider
           style={styles.slider}
           onValueChange={val => onSeek(val)}
